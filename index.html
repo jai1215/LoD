@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="kor">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.1/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+    <div class="container">
+    <h2>Table Test</h2>
+    <div class="col-md-8">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Map Picture</div>
+            <div class="panel-body">
+                <svg id="Main_Control" class="center-block" width="400" height="400">
+                    <g id="mapInfo" transform="translate(200, 0) scale(0.8, 0.56) rotate(45)"></g>
+                    <g id="mapBase" transform="translate(200, 0) scale(0.8, 0.56) rotate(45)"></g>
+                </svg>
+            </div>
+        </div>
+        <div class="panel panel-primary">
+            <div class="panel-heading">Guide</div>
+            <div class="panel-body">
+                <ul>
+                    <li>Start Point : press <kbd>1</kbd></li>
+                    <li>Teleport Point : press <kbd>2</kbd></li>
+                    <li>Wall Point : press <kbd>3</kbd></li>
+                    <li>Dongo Point : press <kbd>4</kbd></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="panel panel-primary">
+            <div class="panel-heading">Options</div>
+            <div class="panel-body">
+                <div class="form-inline">
+                    <div class="form-group form-group-sm">
+                        <label for="inputMapWidth">MAP width </label>
+                        <input type="text" class="form-control" id="inputMapWidth" value="10">
+                    </div>
+                    <div class="form-group form-group-sm">
+                        <label for="inputMapHeight">MAP height</label>
+                        <input type="text" class="form-control" id="inputMapHeight" value="10">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<script>
+    function make_svg_element(element){
+        return document.createElementNS("http://www.w3.org/2000/svg", element);
+    }
+    function move_point(pos, move, ret){
+        pos[0] = pos[0] + move[0];
+        pos[1] = pos[1] + move[1];
+        ret = ret + pos[0] + "," + pos[1] + " ";
+        return ret;
+    }
+    function make_arrow_element(x, y, dir, size){
+        var s_x = 20;
+        var s_y = 20;
+        var w = 40;
+        var h = 40;
+        var pos = [s_x+x*(w+10)+w/2, s_y+y*(h+10)+h/2];
+        var points = "";
+        points = move_point(pos, [-size/2, +size/2], points);
+        points = move_point(pos, [size, 0], points);
+        points = move_point(pos, [-size/2, -size*0.7], points);
+        var new_poly = make_svg_element('polyline');
+        $(new_poly).attr('points', points);
+        if(dir == 0)
+            $(new_poly).addClass("dirUp");
+        else if(dir == 1)
+            $(new_poly).addClass("dirRight");
+        else if(dir == 2)
+            $(new_poly).addClass("dirDown");
+        else if(dir == 3)
+            $(new_poly).addClass("dirLeft");
+        $(new_poly).addClass("mapArrow");
+        $(new_poly).attr("id", "mapArrow"+x+"x"+y);
+        $('#mapInfo').append(new_poly);
+    }
+   function make_square_element(x, y){
+       var s_x = 20;
+       var s_y = 20;
+       var w = 40;
+       var h = 40;
+       var newElement = make_svg_element('rect');
+       $(newElement).attr('x', s_x+x*(w+10)).attr('y', s_y+y*(h+10));
+       $(newElement).attr('width', w).attr('height', h);
+       $(newElement).addClass("mapRect");
+       $(newElement).attr("id", "mapBase"+x+"x"+y);
+       newElement.addEventListener('focus', function(){
+           this.addEventListener('keypress',function(e){
+               var key = e.keyCode;
+               var position = $(this).attr("id").replace("mapBase", "").split('x');
+               var x = parseInt(position[0]);
+               var y = parseInt(position[1]);
+               var dir = 4;
+               if((key == 100)||(key == 115)||(key == 97)||(key == 119)){
+                   $(this).removeClass('dirRight');
+                   $(this).removeClass('dirLeft');
+                   $(this).removeClass('dirUp');
+                   $(this).removeClass('dirDown');
+               }
+               if(key == 100){
+                   $(this).addClass("dirRight");
+                   dir = 1;
+               }
+               else if(key == 115){
+                   $(this).addClass("dirDown");
+                   dir = 2;
+               }
+               else if(key == 97){
+                   $(this).addClass("dirLeft");
+                   dir = 3;
+               }
+               else if(key == 119){
+                   $(this).addClass("dirUp");
+                   dir = 0;
+               }
+               else if(key == 49)
+                   $(this).addClass("infoStartPoint");
+               else if(key == 50)
+                   $(this).addClass("infoTelPoint");
+               else if(key == 51)
+                   $(this).addClass("infoWall");
+               else if(key == 52)
+                   $(this).addClass("infoDonGo");
+               else
+                console.log(key);
+               $('#mapArrow'+x+'x'+y).remove();
+               if(dir<4)
+                make_arrow_element(x, y, dir, 10);
+
+           });
+       }, newElement);
+
+       return newElement;
+
+    }
+    function draw_base_map(){
+        var x_max = parseInt($("#inputMapWidth").val());
+        var y_max = parseInt($("#inputMapHeight").val());
+        $('#Main_Control').attr('width', 20*2+40*x_max+10*(x_max-1));
+        $('#Main_Control').attr('height', 20*2+40*y_max+10*(y_max-1));
+        $('.mapRect').remove();
+        for(var x=0;x<x_max;x++){
+            for(var y=0;y<y_max;y++){
+                $('#mapBase').append(make_square_element(x, y));
+            }
+        }
+    }
+    $(document).ready(function() {
+        draw_base_map();
+        $('#inputMapWidth').change(draw_base_map);
+        $('#inputMapHeight').change(draw_base_map);
+    });
+</script>
+</body>
+</html>
